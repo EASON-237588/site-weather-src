@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Windows
+Thumbs.db
+desktop.ini
+Desktop.ini
+
+# 誤建的空檔案
+新增 文字文件.txt
