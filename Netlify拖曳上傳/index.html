@@ -1,0 +1,1499 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工地環境安全即時監控系統</title>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<style>
+  /* 全站以 vh 縮放，確保單一畫面不捲動 */
+  html{font-size:clamp(8.5px,min(1.12vh,0.85vw),14px)}
+  /* 固定灰黑底色（不隨系統淺色模式改變） */
+  :root{
+    --bg:#4a5158; --panel:#15181d; --panel2:#1d2229; --line:#2c333c;
+    --tx:#e8edf3; --tx2:#9aa7b4; --tx3:#727e8b;
+    --ok:#3fb950; --warn:#e0a72a; --bad:#f85149; --info:#58a6ff; --accent:#4cc9f0;
+  }
+  ::selection{background:var(--accent);color:#06202b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{background:var(--bg);color:var(--tx);font-size:1.25rem;
+       font-family:"Microsoft JhengHei","Segoe UI",system-ui,sans-serif;
+       display:flex;flex-direction:column;padding:.8rem;gap:.7rem}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:1rem;
+         padding:.8rem 1rem;display:flex;flex-direction:column;min-height:0;min-width:0}
+  .ph{font-size:1.15rem;color:#ffffff;font-weight:700;letter-spacing:.05em;
+      display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;
+      margin-bottom:.6rem;flex:0 0 auto}
+  .ph em{font-style:normal;font-size:1rem;color:#ffffff;font-weight:500;
+         text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ---------- 頂列 ---------- */
+  .top{flex:0 0 auto;display:flex;flex-direction:row;align-items:center;
+       justify-content:flex-start;gap:1rem;flex-wrap:nowrap;padding:.6rem 1.1rem;
+       position:relative}
+  .tl{display:flex;flex-direction:column;align-items:stretch;gap:.55rem;
+      min-width:0;flex:1 1 auto}
+  .brand{font-size:2.8rem;font-weight:800;white-space:nowrap;
+         display:flex;align-items:center;gap:.75rem}
+  .brand #logo,.brand #logoFb{height:8.8rem;width:auto;flex:0 0 auto;display:block}
+  .brand .bt{display:flex;flex-direction:column;line-height:1.15}
+  .brand .bt b{font-size:1.3rem;font-weight:500;color:var(--tx3);letter-spacing:.14em}
+  .ctrl #lastup{font-size:1.15rem;color:#ffffff;font-weight:400;white-space:nowrap;
+                align-self:flex-end;margin-left:auto;padding-right:.5rem;margin-bottom:.55rem}
+  /* 標題列右上：測站資訊、功能鈕與最後更新 */
+  .ctrl2{flex:0 0 auto;min-width:0;align-self:flex-start;
+         display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;
+         justify-content:flex-end;padding-top:.15rem}
+  .ctrl2 #lastup{font-size:1.15rem;color:#fff;font-weight:400;white-space:nowrap;
+                 align-self:flex-end;margin-bottom:.35rem}
+  .ctrl{display:flex;gap:.6rem;align-items:flex-end;flex:0 1 auto;
+        justify-content:flex-start;flex-wrap:wrap;min-width:0}
+
+  /* ---------- 電子時鐘 ---------- */
+  .clock{margin-left:auto;flex:0 0 auto;display:flex;flex-direction:column;
+         align-items:flex-end;justify-content:center;padding-left:1.2rem;
+         border-left:1px solid var(--line)}
+  .clock .ver{position:absolute;right:.85rem;top:.35rem;font-size:1.05rem;
+              color:var(--tx3);letter-spacing:.04em;white-space:nowrap;
+              font-variant-numeric:tabular-nums;pointer-events:none}
+  .clock .t{font-size:min(18.4rem,11vw);font-weight:800;line-height:.92;letter-spacing:.02em;
+            color:#fff;font-variant-numeric:tabular-nums;
+            font-family:"Consolas","DS-Digital",ui-monospace,monospace;
+            background:linear-gradient(175deg,#ffffff 38%,#ffd7e8 66%,#ff9dc6 100%);
+            -webkit-background-clip:text;background-clip:text;
+            -webkit-text-fill-color:transparent;
+            filter:drop-shadow(0 0 1.6rem rgba(255,150,196,.45));white-space:nowrap}
+  .clock .t i{font-style:normal;font-size:min(8rem,4.8vw);margin-left:.6rem;letter-spacing:0;
+              -webkit-text-fill-color:#ffb6d5;color:#ffb6d5}
+  .f{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+  .f label{font-size:.9rem;color:var(--tx3);white-space:nowrap}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--tx);
+       border-radius:.6rem;padding:.45rem .6rem;font-size:1.2rem;font-family:inherit;
+       width:100%;min-width:0}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .btn{background:var(--accent);color:#06202b;border:0;border-radius:.6rem;
+       padding:.5rem .9rem;font-size:1.2rem;font-weight:700;cursor:pointer;
+       font-family:inherit;white-space:nowrap}
+  .btn.sec{background:var(--panel2);color:var(--tx);border:1px solid var(--line);font-weight:600}
+  .btn:hover{filter:brightness(1.12)}
+  .w-q{width:14rem}.w-c{width:7.4rem}.w-i{width:7rem}.w-k2{width:19rem}
+  /* 鄰近測站顯示（取代原本的金鑰輸入框） */
+  .stabox{background:var(--panel2);border:1px solid var(--line);border-radius:.6rem;
+          padding:.45rem .7rem;font-size:1.15rem;color:var(--tx);min-width:19rem;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+  .stabox b{color:var(--accent);font-weight:700}
+  .stabox .km{color:var(--tx3);font-size:1rem;font-variant-numeric:tabular-nums}
+  .stabox.none{color:var(--tx3)}
+
+  /* ---------- 地點列 ---------- */
+  .place{flex:0 0 auto;display:flex;flex-direction:row;align-items:baseline;
+         gap:.8rem;flex-wrap:wrap;padding:.5rem 1.1rem}
+  .place .nm{font-size:1.9rem;font-weight:800;white-space:nowrap}
+  .place .mt{font-size:1.05rem;color:var(--tx2);white-space:nowrap;
+             overflow:hidden;text-overflow:ellipsis}
+  .tag{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+       padding:.15rem .7rem;font-size:.95rem;color:var(--tx2);white-space:nowrap}
+
+  /* ---------- 主網格 ---------- */
+  .main{flex:1 1 auto;min-height:0;display:grid;gap:.7rem;
+        grid-template-columns:1fr 1fr 1fr 1fr 1.9fr 1.55fr;
+        grid-template-rows:minmax(0,1fr) minmax(0,.36fr)}
+  .g-rain {grid-column:1; grid-row:1}
+  .g-env  {grid-column:2; grid-row:1}
+  .g-wind {grid-column:3; grid-row:1}
+  .g-cw   {grid-column:4; grid-row:1}
+  .g-rdr  {grid-column:5; grid-row:1}
+  .g-cr   {grid-column:6; grid-row:1}
+  .g-al   {grid-column:1/7; grid-row:2; overflow:hidden}
+
+  /* ---------- 數據卡 ---------- */
+  .grid{display:grid;gap:.55rem;flex:1;min-height:0}
+  .g3{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
+  /* 直向單欄：一個類別一欄，四張卡由上而下 */
+  .g1{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(0,1fr))}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:.7rem;
+        padding:.45rem .65rem;display:flex;flex-direction:column;justify-content:center;
+        min-width:0;overflow:hidden}
+  .card .k{font-size:1.2rem;color:#ffffff;white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis}
+  .card .v{font-size:3.2rem;font-weight:800;line-height:1.15;
+           font-variant-numeric:tabular-nums;white-space:nowrap}
+  .card .v small{font-size:1.35rem;font-weight:600;color:var(--tx2);margin-left:.15rem}
+  .card .n{font-size:1.05rem;color:var(--tx3);white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis}
+  .c-ok .v{color:var(--ok)} .c-warn .v{color:var(--warn)} .c-bad .v{color:var(--bad)}
+
+  /* ---------- 內嵌雷達回波 ---------- */
+  .rdmain{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+          background:#000;border-radius:.6rem;overflow:hidden;cursor:zoom-in}
+  .rdmain img{width:100%;height:100%;object-fit:contain;display:block}
+
+  /* ---------- 圖表 ---------- */
+  .chartwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .chart{flex:1;min-height:0;display:flex;align-items:flex-end;gap:.18rem;
+         border-bottom:1px solid var(--line)}
+  .bar{flex:1;background:var(--info);border-radius:.25rem .25rem 0 0;
+       position:relative;min-height:1px;transition:.15s}
+  .bar.now{background:var(--accent)}
+  .bar.fc{opacity:.42}
+  .bar:hover{filter:brightness(1.4)}
+  .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+       background:#000;color:#fff;padding:.25rem .55rem;border-radius:.4rem;
+       font-size:1rem;white-space:nowrap;z-index:30;margin-bottom:.3rem}
+  .bar:hover .tip{display:block}
+  .xax{flex:0 0 auto;display:flex;gap:.18rem;margin-top:.2rem}
+  .xax div{flex:1;text-align:center;font-size:.85rem;color:var(--tx3);
+           overflow:hidden;white-space:nowrap}
+  .duo{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem}
+  .duo>div{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .duoh{font-size:1rem;color:var(--tx3);margin-bottom:.3rem;flex:0 0 auto}
+
+  /* ---------- 研判列 ---------- */
+  .alerts{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;
+          flex:1 1 auto;min-height:0}
+  .al{background:var(--panel2);border-left:.7rem solid;border-radius:.8rem;
+      padding:.8rem 1.2rem;min-width:0;min-height:0;overflow:hidden}
+  .al .t{font-size:1.9rem;color:#ffffff;white-space:nowrap;
+         overflow:hidden;text-overflow:ellipsis}
+  .al .m{font-size:3rem;font-weight:800;line-height:1.2;white-space:nowrap;margin:.15rem 0}
+  .al .d{font-size:1.9rem;color:var(--tx2);line-height:1.35;
+         display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .lv-ok{border-color:var(--ok)}     .lv-ok .m{color:var(--ok)}
+  .lv-warn{border-color:var(--warn)} .lv-warn .m{color:var(--warn)}
+  .lv-bad{border-color:var(--bad)}   .lv-bad .m{color:var(--bad)}
+  /* 可點擊開啟詳細資訊的面板／卡片 */
+  .g-cr{cursor:pointer}
+  .al[data-t="颱風"]{cursor:pointer}
+  .g-cr:hover,.al[data-t="颱風"]:hover{border-color:var(--accent)}
+  .alerts.dense .al{padding:.6rem .8rem;border-left-width:.5rem}
+  .alerts.dense .al .t{font-size:1.45rem}
+  .alerts.dense .al .m{font-size:2.15rem}
+  .alerts.dense .al .d{font-size:1.4rem;-webkit-line-clamp:3}
+
+  /* ---------- 其他 ---------- */
+  .hide{display:none!important}
+  .sugg{position:relative}
+  .sugglist{position:absolute;top:100%;left:0;right:0;z-index:40;background:var(--panel);
+       border:1px solid var(--line);border-radius:.6rem;margin-top:.25rem;overflow:hidden;
+       box-shadow:0 .6rem 2rem rgba(0,0,0,.4)}
+  .sugglist div{padding:.45rem .6rem;font-size:1.15rem;cursor:pointer;white-space:nowrap;
+       overflow:hidden;text-overflow:ellipsis}
+  .sugglist div:hover{background:var(--panel2)}
+  #err{position:fixed;left:50%;top:.8rem;transform:translateX(-50%);z-index:60;
+       background:var(--bad);color:#fff;border-radius:.6rem;padding:.5rem 1rem;
+       font-size:1.15rem;max-width:70vw;box-shadow:0 .5rem 1.5rem rgba(0,0,0,.4)}
+  /* 明細 / 說明 疊層 */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:50;
+      display:flex;align-items:center;justify-content:center;padding:3vh}
+  .ovbox{background:var(--panel);border:1px solid var(--line);border-radius:1rem;
+         padding:1.2rem;max-height:94vh;max-width:min(96vw,1100px);overflow:auto;width:100%}
+  table{width:100%;border-collapse:collapse;font-size:1.15rem}
+  th,td{padding:.35rem .6rem;border-bottom:1px solid var(--line);text-align:right;
+        font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--tx3);font-weight:600;font-size:1rem}
+  tr.nowrow{background:rgba(76,201,240,.12)}
+  .note{font-size:1.05rem;color:var(--tx2);line-height:1.85}
+
+  /* ---------- 底列：日期 ＋ 橫向警報跑馬燈 ---------- */
+  .botbar{flex:0 0 auto;display:flex;flex-direction:row;align-items:stretch;gap:1rem;
+          background:var(--panel);border:1px solid var(--line);border-radius:1rem;
+          padding:.45rem .9rem;overflow:hidden}
+  .bdate{flex:0 0 auto;display:flex;align-items:center;white-space:nowrap;
+         font-size:2.2rem;font-weight:800;color:#f3d3e2;letter-spacing:.05em}
+  .banner{display:none;flex:1 1 auto;min-width:0;border-radius:.7rem;
+          flex-direction:row;align-items:center;gap:.9rem;
+          padding:.35rem 1rem;font-size:1.6rem;font-weight:800;color:#fff}
+  .banner.on{display:flex}
+  .banner #bicon{flex:0 0 auto;font-size:1.5rem;line-height:1}
+  .banner .bmsg{flex:1 1 auto;min-width:0;overflow:hidden;
+                white-space:nowrap;letter-spacing:.03em}
+  /* 橫向跑馬燈：捲一圈的距離 = 容器寬 + 文字寬，速度由 JS 依長度換算 */
+  .banner .bmsg .mq{display:inline-block;white-space:nowrap;
+                    animation-name:marquee;animation-timing-function:linear;
+                    animation-iteration-count:infinite;will-change:transform}
+  .banner .bmsg .mq.still{padding-left:0!important;animation:none}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+  .banner .bx{flex:0 0 auto;background:rgba(0,0,0,.34);border:0;color:#fff;
+              border-radius:.5rem;padding:.3rem .8rem;font-size:1.1rem;font-weight:700;
+              cursor:pointer;font-family:inherit;line-height:1.2}
+  .banner .bx:hover{background:rgba(0,0,0,.55)}
+  .banner.lvbad{background:var(--bad)}
+  .banner.lvwarn{background:var(--warn);color:#2a1c00}
+  .banner.lvwarn .bx{color:#2a1c00}
+
+  /* ---------- 降雨快報 ---------- */
+  .nowcast{flex:0 0 auto;margin-top:.5rem;border-radius:.6rem;padding:.5rem .8rem;
+           font-size:1.2rem;font-weight:700;background:var(--panel2);
+           border:1px solid var(--line);color:var(--tx2);line-height:1.35;
+           display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .nowcast.nc-bad{background:rgba(248,81,73,.16);border-color:var(--bad);color:#ffb4ae}
+  .nowcast.nc-warn{background:rgba(224,167,42,.16);border-color:var(--warn);color:#ffdb8f}
+  .nowcast.nc-ok{color:var(--tx3)}
+
+  /* ---------- 雷達 / 颱風 疊層 ---------- */
+  .radarbox{display:flex;flex-direction:column;gap:.6rem;align-items:center}
+  .radarbox img{max-width:100%;max-height:76vh;border-radius:.6rem;background:#000}
+  .rdtabs{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+  .rdtabs button{background:var(--panel2);border:1px solid var(--line);color:var(--tx);
+                 border-radius:.6rem;padding:.4rem .9rem;font-size:1.1rem;cursor:pointer;
+                 font-family:inherit}
+  .rdtabs button.sel{background:var(--accent);color:#06202b;font-weight:700;border-color:var(--accent)}
+  .tylist{display:flex;flex-direction:column;gap:.8rem}
+  .tycard{background:var(--panel2);border:1px solid var(--line);border-left:.7rem solid var(--info);
+          border-radius:.8rem;padding:.9rem 1.2rem}
+  .tycard.t-bad{border-left-color:var(--bad)}
+  .tycard.t-warn{border-left-color:var(--warn)}
+  .tycard h4{font-size:1.7rem;margin-bottom:.35rem}
+  .tycard .tyk{font-size:1.15rem;color:var(--tx2);line-height:1.7}
+  .tyfc{font-size:1.05rem;color:var(--tx3);margin-top:.5rem}
+
+  /* ---------- 日報表預覽 ---------- */
+  .repbar{display:flex;gap:.6rem;margin-bottom:.7rem;flex-wrap:wrap}
+  .repbox iframe{width:100%;height:74vh;border:0;border-radius:.6rem;background:#fff;display:block}
+
+  /* 窄螢幕（手機）改為可捲動的堆疊版 */
+  @media (max-width:900px){
+    html{font-size:12px} html,body{overflow:auto;height:auto}
+    body{min-height:100vh}
+    .top{flex-wrap:wrap} .ctrl{justify-content:flex-start;flex-wrap:wrap;order:3;width:100%}
+    .ctrl2{justify-content:flex-start;width:100%;order:4;align-self:stretch}
+    .clock{margin-left:auto;border-left:0;padding-left:0}
+    .clock .t{font-size:3.4rem} .clock .t i{font-size:1.6rem}
+    .main{grid-template-columns:1fr;grid-template-rows:none}
+    .botbar{flex-wrap:wrap;gap:.5rem}
+    .bdate{font-size:1.6rem}
+    .banner{flex:1 1 100%;flex-wrap:wrap}
+    .banner .bmsg{white-space:normal;-webkit-line-clamp:3;display:-webkit-box;
+                  -webkit-box-orient:vertical;flex:1 1 100%}
+    .banner .bmsg .mq{animation:none;padding-left:0!important}
+    .g-rain,.g-wind,.g-env,.g-cr,.g-cw,.g-rdr,.g-al{grid-column:1;grid-row:auto}
+    .grid.g1{grid-template-rows:repeat(4,auto)}
+    .rdmain{height:46vh}
+    .duo{grid-template-columns:1fr}
+    .grid.g4{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,auto)}
+    .grid.g2{grid-template-rows:repeat(3,auto)}
+    .card .v{font-size:2.1rem}
+    .duo{grid-template-columns:1fr}
+    .chart{height:14vh}
+    .alerts{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+  <!-- 頂列 -->
+  <div class="panel top">
+   <div class="tl">
+    <div class="brand">
+      <img id="logo" src="data:image/png;base64,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" alt="logo" onerror="this.style.display='none';document.getElementById('logoFb').style.display='block'">
+      <svg id="logoFb" viewBox="0 0 120 90" style="display:none">
+        <g fill="none" stroke="#c3ccd6" stroke-width="2.6">
+          <circle cx="42" cy="45" r="30"/>
+          <ellipse cx="42" cy="45" rx="12" ry="30"/>
+          <ellipse cx="42" cy="45" rx="30" ry="12"/>
+          <path d="M22 20 A34 34 0 0 1 74 34"/>
+          <path d="M18 62 A34 34 0 0 0 72 72"/>
+        </g>
+        <g fill="#e30613">
+          <rect x="70" y="16" width="18" height="66"/>
+          <rect x="94" y="34" width="16" height="48"/>
+          <rect x="63" y="16" width="2.6" height="66"/>
+          <rect x="58" y="22" width="2.6" height="60"/>
+          <rect x="88" y="34" width="2.4" height="48"/>
+          <rect x="84" y="40" width="2.4" height="42"/>
+        </g>
+      </svg>
+      <span class="bt">工地環境安全即時監控系統<b>氣象 · 降雨 · 熱危害 · 地震</b></span>
+    </div>
+    <div class="ctrl">
+      <div class="f sugg">
+        <label>地點搜尋</label>
+        <input id="q" class="w-q" placeholder="輸入地名，例：新竹市" autocomplete="off">
+        <div id="sugg" class="sugglist hide"></div>
+      </div>
+      <div class="f"><label>緯度 Lat</label><input id="lat" class="w-c" value="24.1560"></div>
+      <div class="f"><label>經度 Lon</label><input id="lon" class="w-c" value="120.6999"></div>
+      <button class="btn" id="go">查詢</button>
+      <button class="btn sec" id="geo">📍 目前位置</button>
+      <div class="f"><label>鄰近氣象測站（依座標自動偵測）</label>
+        <div id="stainfo" class="stabox">偵測中…</div>
+        <input id="cwa" type="hidden"></div>
+    </div>
+   </div>
+
+    <div class="ctrl2">
+      <small id="lastup">尚未載入</small>
+    </div>
+    <div class="clock">
+      <div class="ver" id="ver"></div>
+      <div class="t"><span id="clkT">--:--</span><i id="clkS">00</i></div>
+    </div>
+  </div>
+
+  <!-- 地點 -->
+  <div class="panel place">
+    <span class="nm" id="pname">—</span>
+    <span class="mt" id="pmeta"></span>
+    <span id="ptags" style="display:flex;gap:.4rem;flex-wrap:wrap"></span>
+  </div>
+
+  <!-- 主網格 -->
+  <div class="main">
+    <div class="panel g-rain">
+      <div class="ph">降雨監控<em id="rainsrc"></em></div>
+      <div class="grid g1" id="rain"></div>
+    </div>
+
+    <div class="panel g-env">
+      <div class="ph">氣溫 / 熱危害<em>養護・塗裝</em></div>
+      <div class="grid g1" id="env"></div>
+    </div>
+
+    <div class="panel g-wind">
+      <div class="ph">風速 / 陣風<em id="windsrc"></em></div>
+      <div class="grid g1" id="wind"></div>
+    </div>
+
+    <div class="panel g-cw">
+      <div class="ph">地震監控<em id="qksrc"></em></div>
+      <div class="grid g1" id="quake"></div>
+    </div>
+
+    <div class="panel g-rdr">
+      <div class="ph">雷達回波<em id="rdtime">點圖可放大</em></div>
+      <div class="rdmain" id="rdmain"><img id="rdmini" alt="雷達回波圖"></div>
+    </div>
+
+    <div class="panel g-cr">
+      <div class="ph">逐時趨勢<em>過去 24 ＋ 未來 12 小時・點面板看明細</em></div>
+      <div class="duoh">逐時雨量 mm（半透明為預報）</div>
+      <div class="chartwrap"><div class="chart" id="chartRain"></div><div class="xax" id="axRain"></div></div>
+    </div>
+
+    <div class="panel g-al">
+      <div class="ph">作業安全研判<em>門檻為一般參考值，實際請依現場規定與監造指示</em></div>
+      <div class="alerts" id="alerts"></div>
+    </div>
+  </div>
+
+  <!-- 底列：日期 ＋ 警報跑馬燈 -->
+  <div class="botbar">
+    <span class="bdate" id="clkD">—</span>
+    <div class="banner" id="banner">
+      <span id="bicon">⚠</span>
+      <div class="bmsg" id="bmsg"></div>
+      <button class="bx" id="bmute" title="靜音 10 分鐘">靜音</button>
+      <button class="bx" id="bclose" title="關閉警示">關閉</button>
+    </div>
+  </div>
+
+<!-- 疊層：逐時明細 -->
+<div class="ov hide" id="ovTbl"><div class="ovbox">
+  <div class="ph">逐時明細<em>點擊灰色區域關閉</em></div>
+  <table id="tbl"></table>
+</div></div>
+
+<!-- 疊層：雷達回波 -->
+<div class="ov hide" id="ovRadar"><div class="ovbox">
+  <div class="ph">雷達回波圖<em>資料：中央氣象署　點擊灰色區域關閉</em></div>
+  <div class="radarbox">
+    <div class="rdtabs" id="rdtabs"></div>
+    <img id="rdimg" alt="雷達回波圖">
+    <div class="note" id="rdnote" style="text-align:center"></div>
+  </div>
+</div></div>
+
+<!-- 疊層：颱風 -->
+<div class="ov hide" id="ovTy"><div class="ovbox">
+  <div class="ph">颱風動態與警特報<em>資料：中央氣象署　點擊灰色區域關閉</em></div>
+  <div class="tylist" id="tylist"></div>
+</div></div>
+
+<!-- 疊層：工地日報表 -->
+<div class="ov hide" id="ovRep"><div class="ovbox">
+  <div class="ph">工地氣象日報表<em>點擊灰色區域關閉</em></div>
+  <div class="repbox">
+    <div class="repbar">
+      <button class="btn" id="rpPrint">🖨 列印 / 另存 PDF</button>
+      <button class="btn sec" id="rpWin">↗ 另開視窗</button>
+      <button class="btn sec" id="rpHtml">⬇ 下載 HTML</button>
+    </div>
+    <iframe id="rpFrame" title="工地氣象日報表"></iframe>
+  </div>
+</div></div>
+
+<!-- 疊層：說明 -->
+<div class="ov hide" id="ovNote"><div class="ovbox">
+  <div class="ph">資料來源與門檻說明<em>點擊灰色區域關閉</em></div>
+  <div class="note">
+    <b>資料來源</b>：Open-Meteo（ECMWF／GFS 模式與觀測同化，全球、免金鑰）。填入中央氣象署
+    Open Data 金鑰後，另取自動氣象站（O-A0003-001）與自動雨量站（O-A0002-001）中
+    <b>離座標最近的測站實測值</b>，金鑰僅存於本機瀏覽器。<br>
+    <b>吊掛作業</b>：陣風 ≥ 10 m/s 應停止吊籠、施工架組拆及高處作業（營造安全衛生設施標準）；
+    ≥ 15 m/s 建議塔吊、移動式起重機停止吊掛；≥ 8 m/s 為警戒。<br>
+    <b>降雨</b>：本頁「當日累積雨量」以<b>當日 00:00 起算</b>，與施工日誌的日雨量紀錄一致，
+    並以 ≥ 80 mm 為大雨、≥ 200 mm 為豪雨提示。
+    須注意氣象署的大雨／豪雨定義是以<b>任意連續 24 小時</b>累積認定，
+    跨夜連續降雨時，當日累積會低於氣象署基準，故研判說明與日報表另列
+    「滾動 24 小時累積」供對照，以較嚴格者為準。
+    時雨量 ≥ 4 mm 建議停止混凝土澆置。
+    「即時降雨強度」在有金鑰時取雨量站<b>近 10 分鐘</b>雨量換算時雨量（解析度約 3 mm/hr），
+    無金鑰時取模式近 15 分鐘值換算。<br>
+    <b>降雨快報</b>：以逐 15 分鐘預報推算未來 2 小時的降雨起訖與尖峰強度。
+    分級刻意做保守，避免警報疲乏：<b>紅色警報＋警報音</b>只在
+    「尖峰 ≥ 4 mm/hr（停止澆置門檻）」或「30 分鐘內降雨且尖峰 ≥ 2 mm/hr」時觸發；
+    持續降雨則需尖峰 ≥ 4 mm/hr 或 2 小時累積 ≥ 8 mm 才升紅。
+    小雨與毛毛雨一律只顯示黃色提示、不發出聲音。<br>
+    <b>颱風</b>：氣象署 W-C0034-005 現存熱帶氣旋，計算中心距工地距離、預報路徑最近接近點，
+    並以<b>七級風暴風半徑</b>判斷是否已進入或將進入暴風圈。
+    天氣警特報取 W-C0033-001，比對工地所在縣市（已處理「台／臺」用字差異）。<br>
+    <b>溫濕度</b>：混凝土澆置建議氣溫 5–32 °C；鋼構塗裝建議相對濕度 &lt; 85 %，且鋼板溫度高於露點 3 °C 以上。<br>
+    <b>熱危害</b>：以氣溫與相對濕度推算自然濕球溫度（Stull 近似），取遮蔭處
+    WBGT ≒ 0.7×濕球 ＋ 0.3×乾球。依重體力工作分級：&lt; 25 °C 可連續作業、
+    25–28 °C 採 75 % 作業／25 % 休息、28–30 °C 採 50 %／50 %、≥ 30 °C 每小時作業不超過
+    15 分鐘並應調移工項避開 10–14 時。若有直接日曬，實際 WBGT 會高於此估算值。<br>
+    <b>風向</b>：以氣象慣例表示「風的來向」。<br>
+    <b>地震</b>：未填金鑰時取 USGS 近 7 日、工地 400 km 內 M≥3 事件，只有規模與震央距離，
+    震度為粗估；填入 CWA 金鑰後改用氣象署顯著有感地震報告，並取<b>離工地最近之地震測站實測震度</b>。
+    研判門檻：震度 3 級留意、4 級立即檢查塔吊基礎與繫壁及施工架繫牆桿、5 弱以上停工全面檢查後始得復工。<br>
+    <b>免責</b>：本頁為輔助研判工具，不可取代現場實測與法定停工判斷。
+  </div>
+</div></div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const N = v => (v===null||v===undefined||Number.isNaN(Number(v))) ? null : Number(v);
+const f = (v,d=1) => (v===null||v===undefined) ? "—" : Number(v).toFixed(d);
+let timer=null, errTimer=null;
+
+/* ============================================================
+   內建金鑰。任何人拿到這支 HTML 開啟即可直接取得氣象署測站
+   實測值，不需自行申請或輸入。
+   ⚠ 拿到檔案的人都能從原始碼取出這把金鑰。放到公開網站前
+     請先把下面這行改成空字串 ""，頁面會自動退回 Open-Meteo 模式。
+   重新產生金鑰：https://opendata.cwa.gov.tw/user/authkey
+   ============================================================ */
+const EMBEDDED_KEY="CWA-04063E2C-B6E0-410A-A694-7078E47B617E";
+
+/* === APP VERSION（bump.py 自動跳號，勿更動此行格式） === */
+const VER="2.9";
+const VER_NAME="小夜景";
+$("ver").textContent="("+VER_NAME+")版本編號:"+VER;
+
+const AUTO_ITV=600;      // 自動更新間隔（秒），固定 10 分鐘
+const CFG="siteWeatherCfg_v2";
+function saveCfg(){
+  try{ localStorage.setItem(CFG, JSON.stringify({
+    lat:$("lat").value, lon:$("lon").value, cwa:$("cwa").value })); }catch(e){}
+}
+function loadCfg(){
+  let c={};
+  try{ c=JSON.parse(localStorage.getItem(CFG)||"{}"); }catch(e){}
+  try{
+    if(c.lat)$("lat").value=c.lat; if(c.lon)$("lon").value=c.lon;
+    // 金鑰優先序：本機已存的 > cwa_key.js > 內建金鑰
+    if(c.cwa) $("cwa").value=c.cwa;
+    else if(window.CWA_DEFAULT_KEY) $("cwa").value=window.CWA_DEFAULT_KEY;
+    else if(EMBEDDED_KEY) $("cwa").value=EMBEDDED_KEY;
+  }catch(e){}
+}
+/* 鄰近測站顯示：取代原金鑰輸入框，直接告訴使用者資料來自哪一站 */
+function showStations(cwa){
+  const box=$("stainfo");
+  if(!$("cwa").value){
+    box.className="stabox none";
+    box.textContent="未設定金鑰，使用 Open-Meteo 模式推估";
+    return;
+  }
+  const parts=[];
+  if(cwa&&cwa.wx)   parts.push('🌡 氣象站 <b>'+cwa.wx.name+'</b>'+
+      '<span class="km"> '+cwa.wx.km.toFixed(1)+' km'+(cwa.wx.time?('・'+hhmm(cwa.wx.time)):"")+'</span>');
+  if(cwa&&cwa.rain) parts.push('🌧 雨量站 <b>'+cwa.rain.name+'</b>'+
+      '<span class="km"> '+cwa.rain.km.toFixed(1)+' km'+(cwa.rain.time?('・'+hhmm(cwa.rain.time)):"")+'</span>');
+  if(!parts.length){
+    box.className="stabox none";
+    box.textContent=(cwa&&cwa.err)?("測站讀取失敗："+cwa.err):"附近查無可用測站";
+    return;
+  }
+  box.className="stabox";
+  box.innerHTML=parts.join("　");
+  box.title=parts.map(function(x){return x.replace(/<[^>]+>/g,"");}).join("　");
+}
+function showErr(m){
+  let e=$("err");
+  if(!m){ if(e) e.remove(); return; }
+  if(!e){ e=document.createElement("div"); e.id="err"; document.body.appendChild(e); }
+  e.textContent="⚠ "+m;
+  clearTimeout(errTimer); errTimer=setTimeout(function(){ if($("err")) $("err").remove(); },12000);
+}
+function dirName(deg){
+  if(deg===null) return "—";
+  const a=["北","北北東","東北","東北東","東","東南東","東南","南南東",
+           "南","南南西","西南","西南西","西","西北西","西北","北北西"];
+  return a[Math.round(deg/22.5)%16];
+}
+function dist(a,b,c,d){
+  const R=6371, r=x=>x*Math.PI/180, dl=r(c-a), dn=r(d-b);
+  const h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dn/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function hhmm(iso){ const d=new Date(iso); if(isNaN(d)) return "—";
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function bft(v){ if(v===null) return "—";
+  const b=[0.3,1.6,3.4,5.5,8,10.8,13.9,17.2,20.8,24.5,28.5,32.7];
+  let k=0; while(k<b.length&&v>=b[k])k++; return k+" 級"; }
+function card(k,v,unit,note,lv){
+  return '<div class="card '+(lv?("c-"+lv):"")+'"><div class="k">'+k+'</div>'+
+    '<div class="v">'+v+(unit?('<small>'+unit+'</small>'):"")+'</div>'+
+    '<div class="n">'+(note||"&nbsp;")+'</div></div>';
+}
+let AL=[];
+function alertBox(t,m,d,lv){
+  AL.push({t:t,m:m,d:d,lv:lv});
+  return '<div class="al lv-'+lv+'" data-t="'+t+'"><div class="t">'+t+'</div>'+
+    '<div class="m">'+m+'</div><div class="d">'+d+'</div></div>';
+}
+
+async function revGeo(lat,lon){
+  try{
+    const r=await fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+lat+"&longitude="+lon+"&localityLanguage=zh");
+    const j=await r.json();
+    const drop=["中華民國"];   // 不顯示的行政層級字眼
+    const uniq=[...new Set([j.countryName,j.principalSubdivision,j.city,j.locality]
+                 .filter(Boolean).filter(function(x){ return drop.indexOf(x)<0; }))];
+    return { name:(j.locality||j.city||j.principalSubdivision||"座標地點"), full:uniq.join(" ") };
+  }catch(e){ return { name:"座標地點", full:"（地名反查服務無法連線）" }; }
+}
+
+let sTimer=null;
+$("q").addEventListener("input",function(){
+  clearTimeout(sTimer);
+  const v=$("q").value.trim();
+  if(!v){ $("sugg").className="sugglist hide"; return; }
+  sTimer=setTimeout(async function(){
+    try{
+      const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(v)+"&count=6&language=zh&format=json");
+      const j=await r.json();
+      if(!j.results||!j.results.length){ $("sugg").className="sugglist hide"; return; }
+      $("sugg").innerHTML=j.results.map(function(x){
+        return '<div data-la="'+x.latitude+'" data-lo="'+x.longitude+'">'+x.name+
+          ' <span style="color:var(--tx3)">— '+[x.admin1,x.country].filter(Boolean).join(", ")+'</span></div>';
+      }).join("");
+      $("sugg").className="sugglist";
+      [...$("sugg").children].forEach(function(d){
+        d.onclick=function(){
+          $("lat").value=(+d.dataset.la).toFixed(4);
+          $("lon").value=(+d.dataset.lo).toFixed(4);
+          $("sugg").className="sugglist hide"; $("q").value=""; run();
+        };
+      });
+    }catch(e){}
+  },350);
+});
+document.addEventListener("click",function(e){ if(!e.target.closest(".sugg")) $("sugg").className="sugglist hide"; });
+
+/* ---------- CWA ---------- */
+function cwaVal(v){ const n=Number(v); if(!isFinite(n)||n<=-90) return null; return n; }
+function coordOf(st){
+  try{ const cs=st.GeoInfo.Coordinates;
+    const c=cs.find(function(x){return x.CoordinateName==="WGS84";})||cs[0];
+    return [Number(c.StationLatitude),Number(c.StationLongitude)];
+  }catch(e){ return null; }
+}
+async function cwaFetch(ds,key){
+  const r=await fetch("https://opendata.cwa.gov.tw/api/v1/rest/datastore/"+ds+"?Authorization="+encodeURIComponent(key)+"&format=JSON");
+  if(!r.ok) throw new Error("HTTP "+r.status+"（金鑰是否正確？）");
+  const j=await r.json(); if(!j.records) throw new Error("回應格式異常");
+  return j.records.Station||[];
+}
+function nearest(sts,lat,lon){
+  let best=null,bd=1e9;
+  for(const st of sts){ const c=coordOf(st); if(!c) continue;
+    const d=dist(lat,lon,c[0],c[1]); if(d<bd){bd=d;best=st;} }
+  return best?{st:best,km:bd}:null;
+}
+async function getCWA(lat,lon,key){
+  const out={};
+  try{
+    const w=nearest(await cwaFetch("O-A0003-001",key),lat,lon);
+    if(w){ const e=w.st.WeatherElement||{};
+      out.wx={ name:w.st.StationName,id:w.st.StationId,km:w.km,time:(w.st.ObsTime||{}).DateTime,
+        temp:cwaVal(e.AirTemperature), rh:cwaVal(e.RelativeHumidity), pres:cwaVal(e.AirPressure),
+        wind:cwaVal(e.WindSpeed), wdir:cwaVal(e.WindDirection),
+        gust:cwaVal((e.GustInfo||{}).PeakGustSpeed),
+        rainDay:cwaVal((e.Now||{}).Precipitation),   // 亦為當日累積
+        wx:(e.Weather||"") };
+    }
+  }catch(e){ out.err=e.message; }
+  try{
+    const p=nearest(await cwaFetch("O-A0002-001",key),lat,lon);
+    if(p){ const e=p.st.RainfallElement||{}, g=k=>cwaVal((e[k]||{}).Precipitation);
+      const m10=g("Past10Min");
+      out.rain={ name:p.st.StationName,id:p.st.StationId,km:p.km,time:(p.st.ObsTime||{}).DateTime,
+        // 注意：氣象署雨量站的 Now 是「當日累積雨量」，不是即時強度
+        day:g("Now"), m10:m10,
+        rate:(m10===null?null:m10*6),          // 近 10 分鐘換算時雨量 mm/hr
+        h1:g("Past1hr"),h3:g("Past3hr"),
+        h6:g("Past6Hr"),h12:g("Past12hr"),h24:g("Past24hr"),
+        d2:g("Past2days"),d3:g("Past3days") };
+    }
+  }catch(e){ out.err=out.err||e.message; }
+  return out;
+}
+
+/* ---------- 地震 ---------- */
+// 震度字串 → 數值等級（5弱=5.0、5強=5.5、6弱=6.0…）
+function intLv(str){
+  if(!str) return null;
+  const m=String(str).match(/([0-7])/); if(!m) return null;
+  let v=Number(m[1]);
+  if(String(str).indexOf("強")>=0) v+=0.5;
+  return v;
+}
+function ago(t){
+  const d=new Date(t); if(isNaN(d)) return "";
+  const m=Math.floor((Date.now()-d)/60000);
+  if(m<1) return "剛剛";
+  if(m<60) return m+" 分鐘前";
+  if(m<1440) return Math.floor(m/60)+" 小時前";
+  return Math.floor(m/1440)+" 天前";
+}
+function eqTime(t){
+  const d=new Date(t); if(isNaN(d)) return "—";
+  const p=n=>String(n).padStart(2,"0");
+  return (d.getMonth()+1)+"/"+d.getDate()+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+async function getQuake(lat,lon,key){
+  const out={src:"USGS",list:[]};
+  if(key){
+    try{
+      const r=await fetch("https://opendata.cwa.gov.tw/api/v1/rest/datastore/E-A0015-001?Authorization="+
+                          encodeURIComponent(key)+"&format=JSON&limit=6");
+      const j=await r.json();
+      const eqs=(j.records&&j.records.Earthquake)||[];
+      if(eqs.length){
+        out.src="CWA";
+        out.list=eqs.map(function(e){
+          const info=e.EarthquakeInfo||{}, ep=info.Epicenter||{};
+          const la=Number(ep.EpicenterLatitude), lo=Number(ep.EpicenterLongitude);
+          let best=null,bd=1e9;                       // 離工地最近的地震測站實測震度
+          (((e.Intensity||{}).ShakingArea)||[]).forEach(function(a){
+            (a.EqStation||[]).forEach(function(st){
+              const sla=Number(st.StationLatitude), slo=Number(st.StationLongitude);
+              if(!isFinite(sla)||!isFinite(slo)) return;
+              const d=dist(lat,lon,sla,slo);
+              if(d<bd){ bd=d; best={name:st.StationName,int:st.SeismicIntensity,km:d}; }
+            });
+          });
+          return { time:info.OriginTime,
+                   mag:Number((info.EarthquakeMagnitude||{}).MagnitudeValue),
+                   depth:Number(info.FocalDepth), place:ep.Location||"",
+                   km:(isFinite(la)&&isFinite(lo))?dist(lat,lon,la,lo):null, sta:best };
+        });
+        return out;
+      }
+    }catch(e){ out.err=e.message; }
+  }
+  try{
+    const st=new Date(Date.now()-7*864e5).toISOString().slice(0,19);
+    const r=await fetch("https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude="+lat+
+      "&longitude="+lon+"&maxradiuskm=400&minmagnitude=3&orderby=time&limit=12&starttime="+st);
+    const j=await r.json();
+    out.list=(j.features||[]).map(function(ft){
+      const g=ft.geometry.coordinates, pr=ft.properties;
+      return { time:new Date(pr.time).toISOString(), mag:Number(pr.mag), depth:Number(g[2]),
+               place:pr.place||"", km:dist(lat,lon,Number(g[1]),Number(g[0])), sta:null };
+    });
+  }catch(e){ out.err=out.err||e.message; }
+  return out;
+}
+
+
+/* ---------- 警報音 ---------- */
+let sndOn=false, ac=null, muteUntil=0, lastAlarmKey="", lastAlarmAt=0;
+function audioCtx(){
+  if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  if(ac.state==="suspended") ac.resume();
+  return ac;
+}
+function beep(times){
+  const a=audioCtx(); if(!a) return;
+  const t0=a.currentTime;
+  for(let i=0;i<(times||3);i++){
+    const o=a.createOscillator(), g=a.createGain();
+    const st=t0+i*0.42;
+    o.type="square"; o.frequency.setValueAtTime(i%2?1180:880,st);
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(0.28,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+0.32);
+    o.connect(g); g.connect(a.destination);
+    o.start(st); o.stop(st+0.34);
+  }
+}
+
+/* ---------- 研判列版面 ----------
+   欄數必須隨視窗寬度重算：只在 render() 算一次的話，視窗尺寸一變
+   （例如載入後才最大化）就會沿用 CSS 預設的 6 欄，8 張卡擠成兩排，
+   連帶把逐時趨勢壓扁。 */
+let alertCount=0;
+function layoutAlerts(){
+  const al=$("alerts");
+  if(!alertCount) return;
+  al.style.gridTemplateColumns =
+    (window.innerWidth>900) ? ("repeat("+alertCount+",minmax(0,1fr))") : "";
+  al.className="alerts"+(alertCount>=7?" dense":"");
+}
+window.addEventListener("resize",layoutAlerts);
+
+/* ---------- 警報橫幕 ---------- */
+const MQ_SPEED=32;        // 跑馬燈速度（像素/秒）。數字越小跑越慢
+let lastMsg="";
+function setMarquee(txt){
+  const box=$("bmsg");
+  lastMsg=txt;
+  box.innerHTML='<span class="mq still">'+esc(txt)+'</span>';
+  const mq=box.firstElementChild;
+  // 先以靜態狀態量出文字實際寬度（讀 offsetWidth 會強制回流，不必等 rAF）
+  const textW=mq.offsetWidth, boxW=box.clientWidth;
+  if(!boxW) return;                       // 尚未顯示，等下次呼叫
+  mq.classList.remove("still");
+  mq.style.paddingLeft=boxW+"px";         // 從容器右緣外開始捲入
+  const dist=boxW+textW;
+  mq.style.animationDuration=(dist/MQ_SPEED).toFixed(1)+"s";
+}
+window.addEventListener("resize",function(){ if(lastMsg) setMarquee(lastMsg); });
+
+function setBanner(items){
+  const bn=$("banner");
+  const bad=items.filter(function(x){return x.lv==="bad";});
+  const warn=items.filter(function(x){return x.lv==="warn";});
+  const use=bad.length?bad:warn;
+  if(!use.length || Date.now()<muteUntil){
+    bn.className="banner";
+    if(!use.length) lastAlarmKey="";
+    return;
+  }
+  const lv=bad.length?"bad":"warn";
+  const key=lv+"|"+use.map(function(x){return x.t+":"+x.m;}).join("|");
+  $("bicon").textContent=lv==="bad"?"\u26d4":"\u26a0";
+  bn.className="banner on lv"+lv;
+  // 先讓跑馬燈顯示出來，量到的容器寬度才正確
+  setMarquee(use.map(function(x){return x.t+"\u3000"+x.m+"\u3000"+x.d;}).join("\u3000\uff5c\u3000"));
+  if(sndOn && lv==="bad"){
+    const changed=(key!==lastAlarmKey);
+    if(changed || Date.now()-lastAlarmAt>5*60000){ beep(changed?4:2); lastAlarmAt=Date.now(); }
+  }
+  lastAlarmKey=key;
+}
+
+/* ---------- 降雨提前預警（未來 2 小時逐 15 分鐘） ---------- */
+function nowcast(om,rNow){
+  const M=om.minutely_15;
+  if(!M||!M.time||!M.precipitation) return {txt:"降雨快報：此地點無逐 15 分鐘預報資料",lv:"ok"};
+  const now=Date.now(), T=M.time, P=M.precipitation;
+  let k=-1;
+  for(let i=0;i<T.length;i++){ if(new Date(T[i]).getTime()>now){ k=i; break; } }
+  if(k<0) return {txt:"降雨快報：無未來時段資料",lv:"ok"};
+  const end=Math.min(T.length-1,k+8);            // 未來約 2 小時
+  const raining=(rNow!==null&&rNow>=0.5);
+  const TH=0.15;                                  // mm/15min，約 0.6 mm/hr
+  let onset=-1,peak=0,stop=-1,tot=0;
+  for(let i=k;i<=end;i++){
+    const v=N(P[i]); if(v===null) continue;
+    tot+=v;
+    if(v>peak){ peak=v; }
+    if(onset<0&&v>=TH) onset=i;
+    if(raining&&stop<0&&v<TH) stop=i;
+  }
+  const mins=i=>Math.max(0,Math.round((new Date(T[i]).getTime()-now)/60000));
+  const ph=peak*4;                    // 尖峰時雨量 mm/hr
+  const HEAVY=4, LIGHT=2;             // 4 mm/hr＝停止澆置門檻；未達 2 mm/hr 視為小雨
+  if(raining){
+    if(stop<0){
+      const bad=(ph>=HEAVY||tot>=8);  // 持續強降雨才升紅，綿綿細雨維持黃色
+      return {txt:"降雨快報：未來 2 小時持續有雨，預估累積 "+tot.toFixed(1)+" mm（尖峰約 "+
+                  ph.toFixed(1)+" mm/hr），"+(bad?"維持防雨與抽排水，暫停澆置與塗裝":"注意排水與覆蓋"),
+              lv:bad?"bad":"warn", peak:ph, tot:tot};
+    }
+    return {txt:"降雨快報：目前降雨中，預估約 "+mins(stop)+" 分鐘後轉小；未來 2 小時累積 "+tot.toFixed(1)+" mm",
+            lv:"warn", peak:ph, tot:tot};
+  }
+  if(onset<0) return {txt:"降雨快報：未來 2 小時無明顯降雨（預估累積 "+tot.toFixed(1)+" mm）",lv:"ok",tot:tot};
+  const m=mins(onset);
+  // 紅：尖峰達停止澆置門檻，或 30 分鐘內就要下且不是小雨
+  const lv=(ph>=HEAVY||(m<=30&&ph>=LIGHT))?"bad":"warn";
+  return { txt:"降雨快報：預估約 "+m+" 分鐘後開始降雨（"+hhmm(T[onset])+"），尖峰強度約 "+ph.toFixed(1)+
+               " mm/hr"+(ph>=HEAVY?"，建議提前收尾澆置、覆蓋模板與材料"
+                        :(ph>=LIGHT?"，建議備妥帆布遮蔽":"，為小雨，注意塗裝與表面作業即可")),
+           lv:lv, mins:m, peak:ph, tot:tot };
+}
+
+/* ---------- 雷達回波 ---------- */
+// 主畫面內嵌的小圖，隨每次更新重抓；點擊開啟可切換圖層的大圖
+function loadMiniRadar(){
+  const im=$("rdmini");
+  im.referrerPolicy="no-referrer";
+  im.src=RADARS[0].u+"?t="+Date.now();
+  $("rdtime").textContent="氣象署合成回波　"+new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})+"　點圖可放大";
+}
+
+const RADARS=[
+  {n:"臺灣（含地形）",u:"https://www.cwa.gov.tw/Data/radar/CV1_TW_3600.png"},
+  {n:"臺灣（簡圖）",  u:"https://www.cwa.gov.tw/Data/radar/CV1_TW_1000.png"},
+  {n:"大範圍",        u:"https://www.cwa.gov.tw/Data/radar/CV1_3600.png"}
+];
+let rdSel=0;
+function loadRadar(){
+  const r=RADARS[rdSel];
+  $("rdimg").referrerPolicy="no-referrer";
+  $("rdimg").src=r.u+"?t="+Date.now();
+  $("rdnote").innerHTML="回波強度單位 dBZ，約每 10 分鐘更新一次。綠色為小雨、黃橙為中大雨、"+
+    "紅紫為強對流（常伴隨瞬間強陣風與雷擊，應立即停止高處與吊掛作業）。"+
+    "<br>目前圖層：<b>"+r.n+"</b>\u3000取得時間 "+new Date().toLocaleTimeString("zh-TW");
+  $("rdtabs").innerHTML=RADARS.map(function(x,i){
+    return '<button data-i="'+i+'" class="'+(i===rdSel?"sel":"")+'">'+x.n+'</button>';
+  }).join("")+'<button data-i="-1">\u21bb 重新整理</button>';
+  [...$("rdtabs").children].forEach(function(b){
+    b.onclick=function(){ const i=+b.dataset.i; if(i>=0) rdSel=i; loadRadar(); };
+  });
+}
+
+/* ---------- 颱風 ---------- */
+// 氣象署 W-C0034-005 為 PascalCase 欄位；座標為分離的 CoordinateLatitude / CoordinateLongitude
+function normTW(x){ return String(x||"").replace(/台/g,"\u81fa"); }
+function zhOf(arr){
+  if(!Array.isArray(arr)) return "";
+  const z=arr.find(function(x){ return x&&/zh/i.test(x.lang||""); });
+  return z?z.value:"";
+}
+function numOf(v){ const n=Number(v); return isFinite(n)?n:null; }
+function tyClass(ms){
+  if(ms===null||!isFinite(ms)) return "\u2014";
+  if(ms>=51.0) return "強烈颱風";
+  if(ms>=32.7) return "中度颱風";
+  if(ms>=17.2) return "輕度颱風";
+  return "熱帶性低氣壓";
+}
+async function getTyphoon(lat,lon,key){
+  const out={list:[],warn:[],mine:[],err:null,hasKey:!!key};
+  if(!key){ out.err="未填 CWA 金鑰"; return out; }
+  try{
+    const r=await fetch("https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005?Authorization="+
+                        encodeURIComponent(key)+"&format=JSON");
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    const rec=j.records||{};
+    const tcs=rec.TropicalCyclones||rec.tropicalCyclones||{};
+    const arr=tcs.TropicalCyclone||tcs.tropicalCyclone||[];
+    out.list=arr.map(function(t){
+      const AD=t.AnalysisData||t.analysisData||{};
+      const fx=AD.Fix||AD.fix||[];
+      const cur=fx.length?fx[fx.length-1]:{};
+      const cla=numOf(cur.CoordinateLatitude), clo=numOf(cur.CoordinateLongitude);
+      const km=(cla!==null&&clo!==null)?dist(lat,lon,cla,clo):null;
+      const r15=numOf((cur.Circle15ms||{}).Radius);      // 七級風暴風半徑 km
+      const r25=numOf((cur.Circle25ms||{}).Radius);      // 十級風暴風半徑 km
+      const FD=t.ForecastData||t.forecastData||{};
+      const ff=FD.Fix||FD.fix||[];
+      let near=null;
+      ff.forEach(function(f){
+        const la=numOf(f.CoordinateLatitude), lo=numOf(f.CoordinateLongitude);
+        if(la===null||lo===null) return;
+        const d=dist(lat,lon,la,lo);
+        if(!near||d<near.km)
+          near={ km:d, hr:numOf(f.ForecastHour), ms:numOf(f.MaxWindSpeed),
+                 r15:numOf((f.Circle15ms||{}).Radius),
+                 p70:numOf(f.Radius70PercentProbability),
+                 state:zhOf(f.StateTransfer) };
+      });
+      const ms=numOf(cur.MaxWindSpeed);
+      const inNow=(km!==null&&r15!==null&&km<=r15);
+      const inFc =(!!near&&near.r15!==null&&near.km<=near.r15);
+      return {
+        name:(t.CwaTyphoonName||t.TyphoonName||"熱帶擾動"),
+        en:(t.TyphoonName||""),
+        no:(t.CwaTyNo||t.CwaTdNo||""),
+        time:cur.DateTime||null,
+        km:km, ms:ms, gust:numOf(cur.MaxGustSpeed), pres:numOf(cur.Pressure),
+        r15:r15, r25:r25,
+        mvDir:(cur.MovingDirection||""), mvSpd:numOf(cur.MovingSpeed),
+        mvTxt:zhOf(cur.MovingPrediction),
+        near:near, inNow:inNow, inFc:inFc
+      };
+    }).sort(function(a,b){
+      if(a.km===null) return 1; if(b.km===null) return -1; return a.km-b.km;
+    });
+  }catch(e){ out.err=e.message; }
+  try{
+    const r=await fetch("https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0033-001?Authorization="+
+                        encodeURIComponent(key)+"&format=JSON");
+    const j=await r.json();
+    out.warn=(((j.records||{}).location)||[]).map(function(L){
+      const hz=[];
+      (((L.hazardConditions||{}).hazards)||[]).forEach(function(h){
+        const i=(h.info||{});
+        if(i.phenomena) hz.push(i.phenomena+(i.significance?("\u00b7"+i.significance):""));
+      });
+      return {loc:L.locationName,hz:hz};
+    }).filter(function(x){ return x.hz.length; });
+  }catch(e){}
+  return out;
+}
+// 找出「本工地所在縣市」的生效警特報（台／臺 正規化）
+function myWarnings(ty,place){
+  if(!ty||!ty.warn||!ty.warn.length) return [];
+  const me=normTW(((place&&place.full)||"")+" "+((place&&place.name)||""));
+  return ty.warn.filter(function(w){ return me.indexOf(normTW(w.loc))>=0; });
+}
+function tyStatus(t){
+  if(!t) return null;
+  if(t.inNow) return {lv:"bad",m:"已在暴風圈內",
+    d:"七級風暴風半徑 "+t.r15+" km，工地距中心 "+t.km.toFixed(0)+" km。應即停止所有高處與吊掛作業，塔吊收桿順風並解除迴轉制動。"};
+  if(t.inFc) return {lv:"bad",m:"預計進入暴風圈",
+    d:"預報 +"+t.near.hr+" 小時最近接近 "+t.near.km.toFixed(0)+" km，屆時暴風半徑 "+t.near.r15+
+      " km。應於進入前完成防颱整備並停工。"};
+  if(t.km!==null&&t.km<600) return {lv:"warn",m:"提前戒備",
+    d:"距工地 "+t.km.toFixed(0)+" km"+(t.near?("，預報最近 "+t.near.km.toFixed(0)+" km"):"")+
+      "。盤點防颱物料、預排收工時程，確認塔吊與施工架繫件。"};
+  // 現在還遠，但預報路徑會接近 —— 給現場提前量
+  if(t.near&&t.near.km<600) return {lv:"warn",m:"路徑接近中",
+    d:"目前距 "+(t.km!==null?t.km.toFixed(0):"?")+" km，預報 +"+t.near.hr+" 小時將接近至 "+
+      t.near.km.toFixed(0)+" km"+(t.near.ms!==null?("（屆時近中心風速 "+t.near.ms+" m/s）"):"")+
+      "。請預排防颱整備與收工時程。"};
+  return {lv:"ok",m:"持續關注",
+    d:(t.km!==null?("距工地 "+t.km.toFixed(0)+" km"):"位置不明")+
+      (t.near?("，預報最近 "+t.near.km.toFixed(0)+" km"):"")+"，尚未影響本工地。"};
+}
+function renderTyphoon(ty,place){
+  const box=$("tylist");
+  if(!ty.hasKey){
+    box.innerHTML='<div class="note">需填入 CWA 氣象署 API 金鑰才能取得颱風動態與警特報。'+
+      '金鑰申請：opendata.cwa.gov.tw \u2192 加入會員 \u2192 取得授權碼。</div>';
+    return;
+  }
+  let h="";
+  if(ty.err) h+='<div class="note" style="color:var(--bad)">颱風資料讀取失敗：'+ty.err+'</div>';
+  const mine=myWarnings(ty,place);
+  if(ty.warn.length){
+    h+='<div class="tycard '+(mine.length?"t-bad":"")+'"><h4>\u26a0 天氣警特報</h4><div class="tyk">'+
+       (mine.length
+         ? ('<b style="color:var(--bad)">本工地所在（'+mine.map(function(w){return w.loc;}).join("、")+'）生效中：'+
+            mine.map(function(w){return w.hz.join("、");}).join("；")+'</b><br>')
+         : '<b style="color:var(--ok)">本工地所在縣市目前無生效警特報。</b><br>')+
+       '全國生效中：'+ty.warn.map(function(w){return w.loc+"（"+w.hz.join("、")+"）";}).join("\u3000")+
+       '</div></div>';
+  }
+  if(!ty.list.length&&!ty.err)
+    h+='<div class="tycard"><h4>目前無颱風或熱帶性低氣壓</h4>'+
+       '<div class="tyk">氣象署颱風資料集無活動中之熱帶氣旋。</div></div>';
+  ty.list.forEach(function(t,i){
+    const st=tyStatus(t);
+    const cls=st.lv==="bad"?"t-bad":(st.lv==="warn"?"t-warn":"");
+    h+='<div class="tycard '+cls+'"><h4>\ud83c\udf00 '+t.name+(t.en?("\u3000"+t.en):"")+
+       (t.no?("\u3000編號 "+t.no):"")+(i===0?'\u3000<span style="font-size:1.1rem;color:var(--tx3)">（距工地最近）</span>':"")+'</h4>'+
+       '<div class="tyk">'+
+       '強度：<b>'+tyClass(t.ms)+'</b>\u3000近中心最大風速 '+(t.ms===null?"\u2014":t.ms)+' m/s'+
+       (t.gust!==null?("\u3000瞬間最大陣風 "+t.gust+" m/s"):"")+
+       (t.pres!==null?("\u3000中心氣壓 "+t.pres+" hPa"):"")+'<br>'+
+       '暴風半徑：七級風 '+(t.r15!==null?t.r15+" km":"\u2014")+
+       (t.r25!==null?("\u3000十級風 "+t.r25+" km"):"")+'<br>'+
+       '距本工地：<b>'+(t.km!==null?t.km.toFixed(0)+" km":"\u2014")+'</b>'+
+       (t.mvTxt?("\u3000"+t.mvTxt):(t.mvDir?("\u3000移動 "+t.mvDir):""))+
+       (t.time?("\u3000觀測 "+String(t.time).replace("T"," ").slice(5,16)):"")+'<br>'+
+       '研判：<b>'+st.m+'</b>\u3000'+st.d+
+       '</div>'+
+       (t.near?('<div class="tyfc">預報路徑最近接近點：約 '+t.near.km.toFixed(0)+' km'+
+                (t.near.hr!==null?("（+"+t.near.hr+" 小時"):"（")+
+                (t.near.ms!==null?("，屆時近中心風速 "+t.near.ms+" m/s"):"")+
+                (t.near.p70!==null?("，70% 機率半徑 "+t.near.p70+" km"):"")+'）'+
+                (t.near.state?("　"+t.near.state):"")+'</div>'):"")+
+       '</div>';
+  });
+  box.innerHTML=h;
+}
+
+/* ---------- 工地日報表 ---------- */
+let LAST=null;
+function esc(x){ return String(x==null?"":x).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+function buildReport(){
+  if(!LAST){ showErr("尚無資料，請先完成一次查詢"); return; }
+  const L=LAST, d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  const ds=d.getFullYear()+"/"+p(d.getMonth()+1)+"/"+p(d.getDate());
+  const ts=ds+" "+p(d.getHours())+":"+p(d.getMinutes());
+  const rows=L.alerts.map(function(a){
+    const c={ok:"#1a7f37",warn:"#9a6700",bad:"#b42318"}[a.lv];
+    return "<tr><td>"+esc(a.t)+"</td><td style='color:"+c+";font-weight:700'>"+esc(a.m)+
+           "</td><td class='L'>"+esc(a.d)+"</td></tr>";
+  }).join("");
+  const kv=L.kv.map(function(x){ return "<tr><td>"+esc(x[0])+"</td><td class='R'>"+esc(x[1])+"</td></tr>"; }).join("");
+  const hr=L.hours.map(function(r){
+    return "<tr>"+r.map(function(c,i){return "<td class='"+(i?"R":"L")+"'>"+esc(c)+"</td>";}).join("")+"</tr>";
+  }).join("");
+  const html='<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'+
+   '<title>工地氣象日報表 '+ds+'</title><style>'+
+   '@page{size:A4;margin:14mm}'+
+   'body{font-family:"Microsoft JhengHei",sans-serif;color:#111;font-size:11pt;line-height:1.5}'+
+   'h1{font-size:17pt;margin:0 0 2mm;border-bottom:2px solid #111;padding-bottom:2mm}'+
+   'h2{font-size:12.5pt;margin:6mm 0 2mm;border-left:4px solid #111;padding-left:2.5mm}'+
+   '.meta{font-size:10pt;color:#444;margin-bottom:1mm}'+
+   'table{width:100%;border-collapse:collapse;margin-bottom:2mm}'+
+   'th,td{border:1px solid #999;padding:1.4mm 2mm;font-size:10pt;text-align:center}'+
+   'th{background:#eceff3;font-weight:700}'+
+   'td.L{text-align:left}td.R{text-align:right}'+
+   '.sign{margin-top:8mm;display:flex;gap:8mm}'+
+   '.sign div{flex:1;border-top:1px solid #111;padding-top:2mm;font-size:10pt;text-align:center}'+
+   '.foot{margin-top:5mm;font-size:9pt;color:#555;line-height:1.6}'+
+   '.noprint{margin-bottom:5mm}'+
+   '@media print{.noprint{display:none}}'+
+   '</style></head><body>'+
+   '<h1>工地環境安全氣象日報表</h1>'+
+   '<div class="meta">工地地點：'+esc(L.place)+'\u3000｜\u3000座標：'+esc(L.coord)+'\u3000｜\u3000填表時間：'+ts+'</div>'+
+   '<div class="meta">資料來源：'+esc(L.src)+'</div>'+
+   '<h2>一、即時氣象觀測值</h2><table>'+
+   '<tr><th style="width:38%">項目</th><th>數值</th></tr>'+kv+'</table>'+
+   '<h2>二、作業安全研判</h2><table>'+
+   '<tr><th style="width:20%">作業項目</th><th style="width:16%">研判結果</th><th>說明與應辦事項</th></tr>'+
+   rows+'</table>'+
+   '<h2>三、逐時紀錄（過去 12 小時 ～ 未來 12 小時）</h2><table>'+
+   '<tr><th>時間</th><th>雨量<br>mm</th><th>3hr累積<br>mm</th><th>氣溫<br>°C</th><th>濕度<br>%</th>'+
+   '<th>風速<br>m/s</th><th>陣風<br>m/s</th><th>風向</th></tr>'+hr+'</table>'+
+   '<div class="sign"><div>現場工地主任</div><div>職安衛管理人員</div><div>監造 / 業主</div></div>'+
+   '<div class="foot">備註：本報表門檻為一般參考值（陣風 ≥10 m/s 停止高處作業、≥15 m/s 停止吊掛；'+
+   '時雨量 ≥4 mm 停止混凝土澆置；日累積 ≥80 mm 大雨、≥200 mm 豪雨；WBGT 25/28/30 °C 熱危害分級；'+
+   '震度 4 級立即檢查、5 弱以上停工檢查）。實際停復工判斷應依現場實測、契約規定與監造指示辦理。</div>'+
+   '</body></html>';
+  REPHTML=html; REPNAME="工地氣象日報表_"+ds.replace(/\//g,"")+".html";
+  $("rpFrame").srcdoc=html;
+  $("ovRep").classList.remove("hide");
+}
+let REPHTML="", REPNAME="report.html";
+
+/* ---------- 主流程 ---------- */
+async function run(){
+  const lat=parseFloat($("lat").value), lon=parseFloat($("lon").value);
+  if(!isFinite(lat)||!isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180){
+    showErr("座標格式錯誤：緯度需 -90~90、經度需 -180~180"); return; }
+  saveCfg(); $("lastup").textContent="讀取中…";
+
+  const url="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,"+
+    "surface_pressure,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code"+
+    "&minutely_15=precipitation"+
+    "&hourly=precipitation,rain,temperature_2m,relative_humidity_2m,pressure_msl,"+
+    "wind_speed_10m,wind_gusts_10m,wind_direction_10m"+
+    "&daily=precipitation_sum,precipitation_hours,wind_speed_10m_max,wind_gusts_10m_max,"+
+    "temperature_2m_max,temperature_2m_min"+
+    "&wind_speed_unit=ms&timezone=auto&past_days=2&forecast_days=2";
+
+  let om,place,cwa={};
+  try{
+    const res=await Promise.all([fetch(url),revGeo(lat,lon)]);
+    if(!res[0].ok) throw new Error("Open-Meteo HTTP "+res[0].status);
+    om=await res[0].json(); place=res[1];
+  }catch(e){ showErr("氣象資料讀取失敗："+e.message); $("lastup").textContent="讀取失敗"; return; }
+
+  const key=$("cwa").value.trim();
+  if(key){ try{ cwa=await getCWA(lat,lon,key); }catch(e){ cwa={err:e.message}; } }
+  if(cwa.err) showErr("CWA 測站資料取得失敗："+cwa.err+"　已改用模式資料顯示。");
+  else showErr("");
+
+  let quake={src:"USGS",list:[]};
+  try{ quake=await getQuake(lat,lon,key); }catch(e){ quake={src:"USGS",list:[],err:e.message}; }
+
+  let ty={list:[],warn:[],err:null,hasKey:!!key};
+  try{ ty=await getTyphoon(lat,lon,key); }catch(e){ ty.err=e.message; }
+
+  render(lat,lon,om,place,cwa,quake,ty);
+}
+
+function render(lat,lon,om,place,cwa,quake,ty){
+  const c=om.current||{}, H=om.hourly, D=om.daily, now=new Date();
+  AL=[];
+
+  $("pname").textContent=place.name;
+  $("pmeta").textContent=(place.full||"")+" ｜ "+lat.toFixed(4)+", "+lon.toFixed(4);
+  const tags=['<span class="tag">高程 '+(om.elevation!=null?om.elevation+" m":"—")+'</span>',
+              '<span class="tag">'+(om.timezone_abbreviation||om.timezone||"")+'</span>'];
+  if(cwa.wx)   tags.push('<span class="tag">🌡 '+cwa.wx.name+' '+cwa.wx.km.toFixed(1)+' km</span>');
+  if(cwa.rain) tags.push('<span class="tag">🌧 '+cwa.rain.name+' '+cwa.rain.km.toFixed(1)+' km</span>');
+  if(!cwa.wx&&!cwa.rain) tags.push('<span class="tag">Open-Meteo 模式（未填 CWA 金鑰）</span>');
+  if(ty&&ty.list&&ty.list.length){
+    const t0=ty.list[0], danger=(t0.inNow||t0.inFc||(t0.km!==null&&t0.km<600));
+    tags.push('<span class="tag"'+(danger?' style="border-color:var(--bad);color:#ffb4ae"':"")+
+      '>\ud83c\udf00 '+t0.name+(t0.km!==null?(" "+t0.km.toFixed(0)+" km"):"")+'</span>');
+  }
+  myWarnings(ty,place).forEach(function(w){
+    tags.push('<span class="tag" style="border-color:var(--bad);color:#ffb4ae">\u26a0 '+
+      w.loc+w.hz.join("、")+'</span>');
+  });
+  $("ptags").innerHTML=tags.join("");
+  showStations(cwa);
+  loadMiniRadar();
+
+  let iNow=0,bd=1e18;
+  H.time.forEach(function(t,i){ const d=Math.abs(new Date(t)-now); if(d<bd){bd=d;iNow=i;} });
+
+  function sum(arr,a,b){ let s=0,ok=false;
+    for(let i=Math.max(0,a);i<=Math.min(arr.length-1,b);i++){
+      const v=N(arr[i]); if(v!==null){s+=v;ok=true;} }
+    return ok?s:null; }
+
+  let mm15=null;
+  if(om.minutely_15&&om.minutely_15.time){
+    const T=om.minutely_15.time,P=om.minutely_15.precipitation; let k=-1,b=1e18;
+    T.forEach(function(t,i){ const d=now-new Date(t); if(d>=0&&d<b){b=d;k=i;} });
+    if(k>=0) mm15=N(P[k]);
+  }
+
+  const uc=!!cwa.rain;
+  const r_now=uc&&cwa.rain.rate!==null?cwa.rain.rate:(mm15!==null?mm15*4:N(c.precipitation));
+  const r_1h =uc&&cwa.rain.h1 !==null?cwa.rain.h1 :sum(H.precipitation,iNow,iNow);
+  const r_3h =uc&&cwa.rain.h3 !==null?cwa.rain.h3 :sum(H.precipitation,iNow-2,iNow);
+  const r_6h =uc&&cwa.rain.h6 !==null?cwa.rain.h6 :sum(H.precipitation,iNow-5,iNow);
+
+  const todayStr=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  let dayIdx=D.time.indexOf(todayStr); if(dayIdx<0) dayIdx=Math.min(2,D.time.length-1);
+  const dSum=(uc&&cwa.rain.day!==null)?cwa.rain.day:N(D.precipitation_sum[dayIdx]);
+  // 當日累積（00:00 起算）為主要顯示與研判依據；
+  // 滾動 24 小時累積仍計算並列於研判說明與報表，供對照氣象署大雨定義。
+  const r_24h=(uc&&cwa.rain.h24!==null)?cwa.rain.h24:sum(H.precipitation,iNow-23,iNow);
+  const fc12=sum(H.precipitation,iNow+1,iNow+12);
+
+  const rl=v=>v===null?"":(v>=40?"bad":v>=10?"warn":v>0?"ok":"");
+  const rl24=v=>v===null?"":(v>=200?"bad":v>=80?"warn":v>0?"ok":"");
+  $("rainsrc").textContent=uc?("雨量站實測 "+cwa.rain.name+"　"+(cwa.rain.time?hhmm(cwa.rain.time):"—"))
+                            :"Open-Meteo 模式推估";
+  $("rain").innerHTML=
+    card("即時降雨強度",f(r_now,1),"mm/hr",uc?"雨量站近 10 分鐘換算":"近 15 分鐘換算",rl(r_now))+
+    card("過去 3 小時",f(r_3h,1),"mm","累積",rl(r_3h))+
+    card("當日累積雨量",f(dSum,1),"mm","00:00 起算，大雨 80／豪雨 200",rl24(dSum))+
+    card("未來 12 小時",f(fc12,1),"mm","預報累積",rl(fc12));
+
+  // 降雨快報不再單獨顯示，但仍計算並驅動頂端警報橫幕
+  const NC=nowcast(om,r_now);
+
+  const w_avg=(cwa.wx&&cwa.wx.wind!==null)?cwa.wx.wind:N(c.wind_speed_10m);
+  const w_gust=(cwa.wx&&cwa.wx.gust!==null)?cwa.wx.gust:N(c.wind_gusts_10m);
+  const w_dir=(cwa.wx&&cwa.wx.wdir!==null)?cwa.wx.wdir:N(c.wind_direction_10m);
+  let g24=null;
+  for(let i=Math.max(0,iNow-23);i<=iNow;i++){ const v=N(H.wind_gusts_10m[i]);
+    if(v!==null&&(g24===null||v>g24)) g24=v; }
+  let gfc=null,gfcT=null;
+  for(let i=iNow+1;i<=Math.min(H.time.length-1,iNow+12);i++){ const v=N(H.wind_gusts_10m[i]);
+    if(v!==null&&(gfc===null||v>gfc)){gfc=v;gfcT=H.time[i];} }
+  const wl=v=>v===null?"":(v>=15?"bad":v>=10?"warn":"ok");
+  $("windsrc").textContent=cwa.wx?("氣象站實測 "+cwa.wx.name+"　"+(cwa.wx.time?hhmm(cwa.wx.time):"—"))
+                                 :"Open-Meteo 模式推估";
+  $("wind").innerHTML=
+    card("平均風速",f(w_avg,1),"m/s",bft(w_avg),wl(w_avg))+
+    card("24 小時最大陣風",f(g24,1),"m/s","過去實況",wl(g24))+
+    card("最大陣風",f(w_gust,1),"m/s",bft(w_gust),wl(w_gust))+
+    card("未來 12 小時陣風",f(gfc,1),"m/s",gfcT?("估 "+hhmm(gfcT)):"預報",wl(gfc));
+
+  const t=(cwa.wx&&cwa.wx.temp!==null)?cwa.wx.temp:N(c.temperature_2m);
+  const rh=(cwa.wx&&cwa.wx.rh!==null)?cwa.wx.rh:N(c.relative_humidity_2m);
+  let dew=null;
+  if(t!==null&&rh!==null&&rh>0){ const a=17.27,b=237.7,g=(a*t)/(b+t)+Math.log(rh/100); dew=(b*g)/(a-g); }
+  const spread=(t!==null&&dew!==null)?(t-dew):null;
+  const app=N(c.apparent_temperature);
+
+  // 自然濕球溫度（Stull 近似）→ 遮蔭處 WBGT ≒ 0.7Tw + 0.3Ta
+  let wbgt=null;
+  if(t!==null&&rh!==null&&rh>0){
+    const tw = t*Math.atan(0.151977*Math.sqrt(rh+8.313659)) + Math.atan(t+rh)
+             - Math.atan(rh-1.676331) + 0.00391838*Math.pow(rh,1.5)*Math.atan(0.023101*rh) - 4.686035;
+    wbgt = 0.7*tw + 0.3*t;
+  }
+  const tl=v=>v===null?"":((v<5||v>32)?"bad":((v<10||v>30)?"warn":"ok"));
+  const wg=v=>v===null?"":(v>=30?"bad":(v>=28?"bad":(v>=25?"warn":"ok")));
+  $("env").innerHTML=
+    card("氣溫",f(t,1),"°C","澆置建議 5–32 °C",tl(t))+
+    card("WBGT 綜合熱指數",f(wbgt,1),"°C","重工作 25／28／30 分級",wg(wbgt))+
+    card("體感溫度",f(app,1),"°C","濕度 "+f(rh,0)+" %　露點 "+f(dew,1)+" °C",
+         app===null?"":(app>=38?"bad":(app>=32?"warn":"ok")))+
+    card("風向",dirName(w_dir),"",w_dir===null?"":f(w_dir,0)+"° 來向");
+
+  /* --- 研判 --- */
+  const A=[]; const gv=(w_gust!==null?w_gust:w_avg);
+  if(gv===null) A.push(alertBox("吊車 / 塔吊","資料不足","無有效風速資料，請以現場風速計為準。","warn"));
+  else if(gv>=15) A.push(alertBox("吊車 / 塔吊","停止吊掛","陣風 "+f(gv,1)+" m/s（"+bft(gv)+"），應收桿並確認吊臂固定。","bad"));
+  else if(gv>=10) A.push(alertBox("吊車 / 塔吊","停止高處作業","陣風 "+f(gv,1)+" m/s，應停止吊籠與施工架組拆，吊掛需專人監看。","bad"));
+  else if(gv>=8)  A.push(alertBox("吊車 / 塔吊","警戒","陣風 "+f(gv,1)+" m/s 接近停工門檻，大面積板材、模板吊裝建議暫緩。","warn"));
+  else A.push(alertBox("吊車 / 塔吊","可作業","陣風 "+f(gv,1)+" m/s（"+bft(gv)+"），風力條件正常。","ok"));
+
+  const rnow=(r_now===null?0:r_now), rfc=(fc12===null?0:fc12);
+  if(rnow>=4||(r_1h!==null&&r_1h>=4))
+    A.push(alertBox("混凝土澆置 / 開挖","停止澆置","雨量 "+f(rnow,1)+" mm/hr，應停止澆置並覆蓋保護；開挖面注意邊坡與抽水。","bad"));
+  else if(rnow>0.5||rfc>=5)
+    A.push(alertBox("混凝土澆置 / 開挖","警戒","目前 "+f(rnow,1)+" mm/hr、未來 12 小時估 "+f(rfc,1)+" mm，備妥帆布與抽水設備。","warn"));
+  else if(t!==null&&(t<5||t>32))
+    A.push(alertBox("混凝土澆置 / 開挖","溫度不利","氣溫 "+f(t,1)+" °C 超出 5–32 °C，需採高低溫澆置對策與加強養護。","warn"));
+  else A.push(alertBox("混凝土澆置 / 開挖","可作業","無明顯降雨，氣溫 "+f(t,1)+" °C 適合澆置。","ok"));
+
+  if(rnow>0.2) A.push(alertBox("鋼構塗裝 / 防水","停止施工","表面潮濕，"+f(rnow,1)+" mm/hr 降雨中，塗膜附著力不足。","bad"));
+  else if(rh!==null&&rh>=85) A.push(alertBox("鋼構塗裝 / 防水","不宜施工","相對濕度 "+f(rh,0)+" %（≥85 %），易生白華與附著不良。","warn"));
+  else if(spread!==null&&spread<3) A.push(alertBox("鋼構塗裝 / 防水","不宜施工","氣溫與露點僅差 "+f(spread,1)+" °C，鋼板表面易結露。","warn"));
+  else A.push(alertBox("鋼構塗裝 / 防水","可施工","濕度 "+f(rh,0)+" %、露點差 "+f(spread,1)+" °C，條件良好。","ok"));
+
+  const hb="WBGT "+f(wbgt,1)+" °C";
+  if(wbgt===null) A.push(alertBox("熱危害","資料不足","無有效溫濕度資料，無法計算 WBGT。","warn"));
+  else if(wbgt>=30) A.push(alertBox("熱危害","極高風險",hb+"。重工作每小時限 15 分鐘，應避開 10–14 時。","bad"));
+  else if(wbgt>=28) A.push(alertBox("熱危害","高風險",hb+"。重工作 50 % 作息，補充電解質並監視熱疾病。","bad"));
+  else if(wbgt>=25) A.push(alertBox("熱危害","中等風險",hb+"。重工作 75 % 作業／25 % 休息，充分供水。","warn"));
+  else A.push(alertBox("熱危害","低風險",hb+"，可連續作業，仍應定時補充水分。","ok"));
+
+  /* --- 地震 --- */
+  const QL=(quake&&quake.list)?quake.list:[];
+  const q0=QL.length?QL[0]:null;
+  const lv0=q0&&q0.sta?intLv(q0.sta.int):null;      // CWA 實測震度
+  const d7=QL.filter(function(x){ return (Date.now()-new Date(x.time))<7*864e5; });
+  let mx7=null; d7.forEach(function(x){ if(isFinite(x.mag)&&(mx7===null||x.mag>mx7)) mx7=x.mag; });
+  const n7=d7.filter(function(x){ return x.mag>=4; }).length;
+  const ml=v=>v===null?"":(v>=6?"bad":(v>=5?"warn":"ok"));
+  $("qksrc").textContent = quake&&quake.src==="CWA"
+      ? "氣象署有感地震報告" : "USGS · 400 km 內 M≥3";
+  $("quake").innerHTML=
+    card("最近地震規模", q0?("M "+f(q0.mag,1)):"無紀錄","",
+         q0?(eqTime(q0.time)+"　"+ago(q0.time)):"近 7 日 400 km 內無 M≥3 地震", q0?ml(q0.mag):"ok")+
+    (lv0!==null
+      ? card("本地實測震度", q0.sta.int,"", q0.sta.name+" 站　"+f(q0.sta.km,0)+" km",
+             lv0>=5?"bad":(lv0>=4?"warn":"ok"))
+      : card("震源深度", q0?f(q0.depth,0):"—","km",
+             q0?(q0.depth<30?"淺層地震，搖晃較明顯":"深層地震"):"填入 CWA 金鑰可顯示實測震度"))+
+    card("震央距離", q0&&q0.km!==null?f(q0.km,0):"—","km",
+         q0?(q0.place||"").slice(0,18):"", q0&&q0.km!==null?(q0.km<50?"warn":"ok"):"")+
+    card("近 7 日 M≥4", n7,"次", mx7!==null?("最大 M "+f(mx7,1)):"", n7>=3?"warn":"ok");
+
+  // 研判：優先採實測震度，其次以規模與震央距離粗估
+  const recent = q0 && (Date.now()-new Date(q0.time))<24*3600e3;
+  if(!q0) A.push(alertBox("地震","無事件","近 7 日 400 km 內無顯著地震紀錄。","ok"));
+  else if(lv0!==null&&lv0>=5)
+    A.push(alertBox("地震","停工檢查","本地震度 "+q0.sta.int+"（M"+f(q0.mag,1)+"）。塔吊、施工架、模板支撐與邊坡應全面檢查後始得復工。","bad"));
+  else if(lv0!==null&&lv0>=4)
+    A.push(alertBox("地震","立即檢查","本地震度 "+q0.sta.int+"（M"+f(q0.mag,1)+"）。檢查塔吊基礎與繫壁、施工架繫牆桿及既有裂縫。","bad"));
+  else if(lv0!==null&&lv0>=3)
+    A.push(alertBox("地震","留意","本地震度 "+q0.sta.int+"（M"+f(q0.mag,1)+"，"+ago(q0.time)+"）。巡視臨時結構有無異狀。","warn"));
+  else if(lv0!==null)
+    A.push(alertBox("地震","正常","最近 M"+f(q0.mag,1)+" 本地震度 "+q0.sta.int+"，"+ago(q0.time)+"。","ok"));
+  else if(recent&&q0.mag>=6&&q0.km<150)
+    A.push(alertBox("地震","停工檢查","M"+f(q0.mag,1)+" 於 "+f(q0.km,0)+" km 外（"+ago(q0.time)+"）。震度未實測，建議先檢查塔吊與施工架。","bad"));
+  else if(recent&&((q0.mag>=5&&q0.km<100)||(q0.mag>=6&&q0.km<300)))
+    A.push(alertBox("地震","立即檢查","M"+f(q0.mag,1)+" 於 "+f(q0.km,0)+" km 外（"+ago(q0.time)+"），巡檢臨時結構與邊坡。","warn"));
+  else if(recent&&q0.mag>=4&&q0.km<150)
+    A.push(alertBox("地震","留意","M"+f(q0.mag,1)+" 於 "+f(q0.km,0)+" km 外（"+ago(q0.time)+"），現場人員留意餘震。","warn"));
+  else
+    A.push(alertBox("地震","正常","最近 M"+f(q0.mag,1)+"，距 "+f(q0.km,0)+" km，"+ago(q0.time)+"。","ok"));
+
+  const myW=myWarnings(ty,place);
+  if(myW.length){
+    const hz=myW.map(function(w){return w.hz.join("、");}).join("；");
+    const heavy=/豪雨|大豪雨|超大豪雨/.test(hz), strong=/強風/.test(hz);
+    A.push(alertBox("氣象署特報", myW[0].hz[0],
+      myW.map(function(w){return w.loc;}).join("、")+"發布"+hz+
+      (heavy?"。加強排水與邊坡巡查、深開挖區抽水待命":"")+
+      (strong?"。留意瞬間強陣風，圍籬帆布與鬆散材料應加固":"")+"。",
+      (heavy||strong)?"bad":"warn"));
+  }
+  if(ty&&ty.list&&ty.list.length){
+    const t0=ty.list[0], st=tyStatus(t0);
+    A.push(alertBox("颱風", st.m, t0.name+"（"+tyClass(t0.ms)+"）"+st.d, st.lv));
+  }
+
+  const h24Txt=(r_24h!==null?("；滾動 24 小時 "+f(r_24h,1)+" mm"):"");
+  const dayHead="當日累積 "+f(dSum,1)+" mm"+h24Txt;
+  if(dSum!==null&&dSum>=200) A.push(alertBox("當日累積","豪雨等級",dayHead+"，啟動邊坡、擋土與深開挖防災應變。","bad"));
+  else if(dSum!==null&&dSum>=80) A.push(alertBox("當日累積","大雨等級",dayHead+"，加強排水、抽水機待命。","warn"));
+  else A.push(alertBox("當日累積","正常",dayHead+"，未達大雨標準。","ok"));
+  // 研判卡固定顯示順序；未列名者排在最後，同順位維持產生先後
+  const AL_ORDER=["當日累積","熱危害","吊車 / 塔吊","混凝土澆置 / 開挖",
+                  "鋼構塗裝 / 防水","氣象署特報","颱風","地震"];
+  const ordIdx=function(t){ const i=AL_ORDER.indexOf(t); return i<0?99:i; };
+  const sorted=AL.map(function(x,i){ return {o:ordIdx(x.t), i:i, html:A[i], obj:x}; })
+                 .sort(function(a,b){ return (a.o-b.o)||(a.i-b.i); });
+  AL=sorted.map(function(x){ return x.obj; });
+  $("alerts").innerHTML=sorted.map(function(x){ return x.html; }).join("");
+  alertCount=A.length;
+  layoutAlerts();
+
+  const bnItems=AL.filter(function(x){ return x.lv==="bad"||x.lv==="warn"; }).slice();
+  if(NC.lv==="bad") bnItems.unshift({t:"降雨快報",m:(NC.mins!==undefined?("約 "+NC.mins+" 分鐘後降雨"):"持續降雨"),
+                                     d:NC.txt.replace("降雨快報：",""),lv:"bad"});
+  setBanner(bnItems);
+  renderTyphoon(ty||{list:[],warn:[],hasKey:false},place);
+
+  /* --- 圖表 --- */
+  bars("chartRain","axRain",H.time,H.precipitation,iNow,1,v=>v.toFixed(1)+" mm",false);
+  // 逐時明細與日報表仍需要 3 小時移動累積
+  const acc=H.time.map(function(_,i){ const s=sum(H.precipitation,i-2,i); return s===null?0:s; });
+
+  /* --- 明細表 --- */
+  let rows="<tr><th>時間</th><th>雨量 mm</th><th>3hr 累積</th><th>氣溫 °C</th><th>濕度 %</th>"+
+           "<th>風速 m/s</th><th>陣風 m/s</th><th>風向</th><th>氣壓 hPa</th></tr>";
+  for(let i=Math.max(0,iNow-12);i<=Math.min(H.time.length-1,iNow+12);i++){
+    const d=new Date(H.time[i]);
+    rows+='<tr class="'+(i===iNow?"nowrow":"")+'">'+
+      "<td>"+(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":00"+
+        (i===iNow?" ◀ 現在":(i>iNow?"（預報）":""))+"</td>"+
+      "<td>"+f(N(H.precipitation[i]),1)+"</td><td>"+f(acc[i],1)+"</td>"+
+      "<td>"+f(N(H.temperature_2m[i]),1)+"</td><td>"+f(N(H.relative_humidity_2m[i]),0)+"</td>"+
+      "<td>"+f(N(H.wind_speed_10m[i]),1)+"</td><td>"+f(N(H.wind_gusts_10m[i]),1)+"</td>"+
+      "<td>"+dirName(N(H.wind_direction_10m[i]))+"</td><td>"+f(N(H.pressure_msl[i]),1)+"</td></tr>";
+  }
+  $("tbl").innerHTML=rows;
+
+  const hrs=[];
+  for(let i=Math.max(0,iNow-12);i<=Math.min(H.time.length-1,iNow+12);i++){
+    const d=new Date(H.time[i]);
+    hrs.push([(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":00"+
+              (i===iNow?" ←現在":(i>iNow?"（預報）":"")),
+              f(N(H.precipitation[i]),1), f(acc[i],1), f(N(H.temperature_2m[i]),1),
+              f(N(H.relative_humidity_2m[i]),0), f(N(H.wind_speed_10m[i]),1),
+              f(N(H.wind_gusts_10m[i]),1), dirName(N(H.wind_direction_10m[i]))]);
+  }
+  LAST={
+    place:(function(){
+      const n=place.name||"", fl=place.full||"";
+      if(!fl) return n||"座標地點";
+      return fl.indexOf(n)>=0 ? fl : (n+"　"+fl);
+    })(),
+    coord:lat.toFixed(4)+", "+lon.toFixed(4),
+    src:(cwa.rain||cwa.wx)
+        ? ("中央氣象署測站實測"+(cwa.wx?("／氣象站 "+cwa.wx.name):"")+(cwa.rain?("／雨量站 "+cwa.rain.name):"")+
+           "＋Open-Meteo 預報")
+        : "Open-Meteo（ECMWF／GFS 模式）",
+    alerts:AL.slice(),
+    hours:hrs,
+    kv:[
+      ["即時降雨強度", f(r_now,1)+" mm/hr"],
+      ["過去 1 / 3 / 6 小時雨量", f(r_1h,1)+" / "+f(r_3h,1)+" / "+f(r_6h,1)+" mm"],
+      ["當日累積雨量（00:00 起算）", f(dSum,1)+" mm（大雨 80／豪雨 200）"],
+      ["滾動 24 小時累積雨量", f(r_24h,1)+" mm（氣象署大雨定義基準，供對照）"],
+      ["未來 12 小時預報雨量", f(fc12,1)+" mm"],
+      ["降雨快報", NC.txt.replace("降雨快報：","")],
+      ["平均風速 / 最大陣風", f(w_avg,1)+" / "+f(w_gust,1)+" m/s（"+bft(w_gust)+"）"],
+      ["24 小時最大陣風", f(g24,1)+" m/s"],
+      ["未來 12 小時最大陣風", f(gfc,1)+" m/s"],
+      ["風向", dirName(w_dir)+(w_dir===null?"":("（"+f(w_dir,0)+"°來向）"))],
+      ["氣溫 / 體感", f(t,1)+" / "+f(app,1)+" °C"],
+      ["相對濕度 / 露點", f(rh,0)+" % / "+f(dew,1)+" °C"],
+      ["WBGT 綜合熱指數", f(wbgt,1)+" °C"],
+      ["最近地震", q0?("M"+f(q0.mag,1)+"　"+eqTime(q0.time)+"　距 "+f(q0.km,0)+" km"+
+                    (lv0!==null?("　本地震度 "+q0.sta.int):"")):"近 7 日無顯著地震"],
+      ["氣象署特報", (function(){ const w=myWarnings(ty,place);
+          return w.length ? w.map(function(x){return x.loc+" "+x.hz.join("、");}).join("；")
+                          : (ty&&ty.hasKey?"本工地所在縣市無生效警特報":"未填金鑰"); })()],
+      ["颱風", (ty&&ty.list&&ty.list.length)
+               ? ty.list.map(function(x){ return x.name+"（"+tyClass(x.ms)+"）距 "+
+                   (x.km!==null?x.km.toFixed(0)+" km":"—")+
+                   (x.r15!==null?("，七級風半徑 "+x.r15+" km"):""); }).join("；")
+               : (ty&&ty.hasKey?"目前無颱風":"未填金鑰，無颱風資料")]
+    ]
+  };
+
+  $("lastup").textContent="最後更新 "+now.toLocaleString("zh-TW");
+}
+
+function bars(cid,aid,times,vals,iNow,minMax,fmt,windMode){
+  const a=Math.max(0,iNow-23), b=Math.min(times.length-1,iNow+12);
+  let mx=minMax;
+  for(let i=a;i<=b;i++){ const v=N(vals[i]); if(v!==null&&v>mx) mx=v; }
+  let h="",x="";
+  for(let i=a;i<=b;i++){
+    const v=N(vals[i])||0, d=new Date(times[i]);
+    const pct=Math.max(1,(v/mx)*100);
+    const cls=(i===iNow?"bar now":(i>iNow?"bar fc":"bar"));
+    let col="";
+    if(windMode) col=v>=15?"background:var(--bad)":(v>=10?"background:var(--warn)":"");
+    else         col=v>=40?"background:var(--bad)":(v>=10?"background:var(--warn)":"");
+    h+='<div class="'+cls+'" style="height:'+pct+'%;'+(i===iNow?"":col)+'">'+
+       '<span class="tip">'+(d.getMonth()+1)+"/"+d.getDate()+" "+
+       String(d.getHours()).padStart(2,"0")+":00 ｜ "+fmt(v)+'</span></div>';
+    x+="<div>"+(d.getHours()%6===0?String(d.getHours()).padStart(2,"0"):"")+"</div>";
+  }
+  $(cid).innerHTML=h; $(aid).innerHTML=x;
+}
+
+/* ---------- 事件 ---------- */
+$("go").onclick=run;
+$("lat").addEventListener("keydown",function(e){ if(e.key==="Enter") run(); });
+$("lon").addEventListener("keydown",function(e){ if(e.key==="Enter") run(); });
+$("cwa").addEventListener("change",run);
+$("geo").onclick=function(){
+  if(!navigator.geolocation){ showErr("此瀏覽器不支援定位"); return; }
+  $("geo").textContent="定位中…";
+  navigator.geolocation.getCurrentPosition(function(p){
+    $("lat").value=p.coords.latitude.toFixed(4);
+    $("lon").value=p.coords.longitude.toFixed(4);
+    $("geo").textContent="📍 目前位置"; run();
+  },function(e){ $("geo").textContent="📍 目前位置";
+    showErr("定位失敗："+e.message+"（file:// 開啟時部分瀏覽器禁止定位，可直接輸入座標）"); },
+  {enableHighAccuracy:true,timeout:10000});
+};
+// 逐時明細：點「逐時趨勢」面板開啟
+document.querySelector(".g-cr").onclick=function(){ $("ovTbl").classList.remove("hide"); };
+// 颱風資訊：點研判列的「颱風」卡片開啟（卡片每次重繪，故用事件委派）
+$("alerts").addEventListener("click",function(e){
+  const al=e.target.closest(".al");
+  if(al&&al.dataset.t==="颱風") $("ovTy").classList.remove("hide");
+});
+$("rdmain").onclick=function(){ $("ovRadar").classList.remove("hide"); loadRadar(); };
+$("rpPrint").onclick=function(){
+  const fr=$("rpFrame");
+  try{ fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch(e){ showErr("列印失敗："+e.message); }
+};
+$("rpWin").onclick=function(){
+  const w=window.open("","_blank");
+  if(!w){ showErr("瀏覽器封鎖了彈出視窗，可改用「列印 / 另存 PDF」或「下載 HTML」"); return; }
+  w.document.open(); w.document.write(REPHTML); w.document.close();
+};
+$("rpHtml").onclick=function(){
+  const b=new Blob([REPHTML],{type:"text/html;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b); a.download=REPNAME;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000);
+};
+$("bmute").onclick=function(){
+  muteUntil=Date.now()+10*60000;
+  $("banner").className="banner";
+  showErr("已靜音 10 分鐘（警報跑馬燈與音效暫停）");
+};
+$("bclose").onclick=function(){
+  $("banner").className="banner";
+};
+["ovTbl","ovNote","ovRadar","ovTy","ovRep"].forEach(function(id){
+  $(id).onclick=function(e){ if(e.target===$(id)) $(id).classList.add("hide"); };
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"){ ["ovTbl","ovNote","ovRadar","ovTy","ovRep"].forEach(function(id){
+    $(id).classList.add("hide"); }); }
+});
+
+/* ---------- 電子時鐘（每秒更新） ---------- */
+(function clock(){
+  const wk=["日","一","二","三","四","五","六"];
+  function tick(){
+    const d=new Date(), p=n=>String(n).padStart(2,"0");
+    $("clkT").textContent=p(d.getHours())+":"+p(d.getMinutes());
+    $("clkS").textContent=p(d.getSeconds());
+    $("clkD").textContent=d.getFullYear()+"/"+p(d.getMonth()+1)+"/"+p(d.getDate())+
+                          "（星期"+wk[d.getDay()]+"）";
+  }
+  tick(); setInterval(tick,1000);
+})();
+
+loadCfg();
+timer=setInterval(run,AUTO_ITV*1000);
+run();
+})();
+</script>
+</body>
+</html>
