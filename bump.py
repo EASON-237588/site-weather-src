@@ -8,7 +8,7 @@
 
 會同時：
   1. 改寫 index.html 裡的 const VER="x.y"
-  2. 把舊版備份到 versions/index_vX.Y.html
+  2. 把舊版備份到 版本歷程/index_vX.Y.html
 """
 import io, os, re, sys, shutil
 
@@ -19,7 +19,7 @@ except Exception:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "index.html")
-VERDIR = os.path.join(HERE, "versions")
+VERDIR = os.path.join(HERE, "版本歷程")
 PAT = re.compile(r'(const VER=")(\d+)\.(\d+)(";)')
 
 
@@ -52,7 +52,7 @@ def main():
 
     s = PAT.sub(lambda x: x.group(1) + new + x.group(4), s, count=1)
     io.open(SRC, "w", encoding="utf-8").write(s)
-    print("版本編號 %s -> %s（舊版備份：versions/index_v%s.html）" % (cur, new, cur))
+    print("版本編號 %s -> %s（舊版備份：版本歷程/index_v%s.html）" % (cur, new, cur))
     return 0
 
 
